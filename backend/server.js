@@ -147,17 +147,29 @@ app.get('/api/analytics', async (req, res) => {
         ]);
 
         // 3. Overall Stats
-        const totalOrders = await Order.countDocuments();
         const totalRevenueResult = await Order.aggregate([
             { $group: { _id: null, total: { $sum: "$totalAmount" } } }
         ]);
         const totalRevenue = totalRevenueResult[0]?.total || 0;
 
+        // 4. Sales by Date (Trend)
+        const salesByDate = await Order.aggregate([
+            {
+                $group: {
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                    revenue: { $sum: "$totalAmount" },
+                    orders: { $sum: 1 }
+                }
+            },
+            { $sort: { _id: 1 } } // Sort by date ascending
+        ]);
+
         res.json({
             popularItems,
             tableStats,
             totalOrders,
-            totalRevenue
+            totalRevenue,
+            salesByDate
         });
     } catch (err) {
         console.error("Analytics Error:", err);

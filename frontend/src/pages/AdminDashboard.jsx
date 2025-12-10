@@ -34,11 +34,27 @@ function AdminDashboard() {
             setOrders(prev => prev.map(o => o._id === updatedOrder._id ? updatedOrder : o));
         });
 
+        // Listen for order deletion
+        socket.on('order_deleted', (deletedId) => {
+            setOrders(prev => prev.filter(o => o._id !== deletedId));
+        });
+
         return () => {
             socket.off('new_order');
             socket.off('order_updated');
+            socket.off('order_deleted');
         };
     }, []);
+
+    const handleDelete = async (orderId) => {
+        if (!window.confirm("Are you sure you want to delete this order?")) return;
+        try {
+            await axios.delete(`${API_URL}/api/orders/${orderId}`);
+        } catch (err) {
+            console.error("Failed to delete order", err);
+            alert("Failed to delete order");
+        }
+    };
 
     const updateStatus = async (orderId, newStatus) => {
         try {
@@ -191,6 +207,19 @@ function AdminDashboard() {
                                     {order.status === 'Completed' && (
                                         <div style={{ textAlign: 'center', color: 'var(--success)', fontWeight: 'bold' }}>✓ Completed</div>
                                     )}
+                                    <button
+                                        onClick={() => handleDelete(order._id)}
+                                        className="btn"
+                                        style={{
+                                            marginTop: '0.5rem',
+                                            background: 'rgba(255, 0, 0, 0.1)',
+                                            color: '#ff6b6b',
+                                            padding: '4px 8px',
+                                            fontSize: '0.8rem'
+                                        }}
+                                    >
+                                        Delete Order
+                                    </button>
                                 </div>
                             </div>
                         </div>

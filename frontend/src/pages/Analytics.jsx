@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area } from 'recharts';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -46,6 +46,32 @@ function Analytics() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' }}>
+
+                {/* Sales Trend Chart */}
+                <div className="card" style={{ padding: '2rem', gridColumn: '1/-1' }}>
+                    <h3 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Sales Trend (Revenue)</h3>
+                    <div style={{ width: '100%', height: 300 }}>
+                        <ResponsiveContainer>
+                            <AreaChart data={data.salesByDate}>
+                                <defs>
+                                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
+                                        <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                                <XAxis dataKey="_id" stroke="var(--text-muted)" />
+                                <YAxis stroke="var(--text-muted)" />
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: 'var(--surface)', border: 'none', borderRadius: '8px' }}
+                                    itemStyle={{ color: 'white' }}
+                                    formatter={(value) => [`$${value.toFixed(2)}`, 'Revenue']}
+                                />
+                                <Area type="monotone" dataKey="revenue" stroke="#8884d8" fillOpacity={1} fill="url(#colorRevenue)" />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
 
                 {/* Popular Items Chart */}
                 <div className="card" style={{ padding: '2rem' }}>
