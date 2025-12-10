@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import io from 'socket.io-client';
 import axios from 'axios';
+import { io } from 'socket.io-client';
 import QRCode from "react-qr-code";
 import Analytics from './Analytics';
-const API_URL = import.meta.env.VITE_API_URL || '';
-const socket = io(API_URL, { transports: ['websocket'] });
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const socket = io(API_URL, {
+    transports: ['websocket', 'polling'],
+    withCredentials: false
+});
 
 function AdminDashboard() {
     const [orders, setOrders] = useState([]);
@@ -13,8 +16,35 @@ function AdminDashboard() {
     // Config State
     const [config, setConfig] = useState({ bannerText: '', discountAmount: 0, isBannerActive: false, totalTables: 10 });
     const [products, setProducts] = useState([]);
-    const [newProduct, setNewProduct] = useState({ name: '', price: '', category: 'Main Course', image: '', description: '' });
+    const [newProduct, setNewProduct] = useState({ name: '', price: '', category: '', image: '', description: '' });
+    const [tableStatus, setTableStatus] = useState({ totalTables: 10, occupiedTables: [] });
     const [productStartIdx, setProductStartIdx] = useState(0); // Pagination for products if needed, simplified for now
+
+    // Fetch real-time table status
+    useEffect(() => {
+        const fetchTableStatus = async () => {
+            try {
+                const res = await axios.get(`${API_URL}/api/tables/status`);
+                setTableStatus(res.data);
+            } catch (err) {
+                console.error('Failed to fetch table status:', err);
+            }
+        };
+
+        fetchTableStatus();
+
+        // Listen for real-time status updates
+        socket.on('table_status_update', (occupiedList) => {
+            setTableStatus(prev => ({
+                ...prev,
+                occupiedTables: occupiedList
+            }));
+        });
+
+        return () => {
+            socket.off('table_status_update');
+        };
+    }, []);
 
     useEffect(() => {
         // Initial load
@@ -261,7 +291,7 @@ function AdminDashboard() {
                         <h2 className="text-2xl font-bold mb-6 text-center">QR Codes for {config.totalTables} Tables</h2>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2rem' }}>
                             {Array.from({ length: config.totalTables || 10 }, (_, i) => i + 1).map(num => {
-                                const isOccupied = orders.some(o => o.tableNo == num && o.status !== 'Completed' && o.status !== 'Cancelled');
+                                const isOccupied = tableStatus.occupiedTables.includes(num);
                                 return (
                                     <div key={num} style={{
                                         background: isOccupied ? 'rgba(255, 107, 107, 0.1)' : 'rgba(75, 203, 164, 0.1)',
