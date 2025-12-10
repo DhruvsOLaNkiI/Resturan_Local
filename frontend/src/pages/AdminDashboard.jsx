@@ -82,10 +82,16 @@ function AdminDashboard() {
             setOrders(prev => prev.filter(o => o._id !== deletedId));
         });
 
+        // Listen for full order refresh (e.g. after clearing a table)
+        socket.on('orders_refreshed', (updatedOrders) => {
+            setOrders(updatedOrders);
+        });
+
         return () => {
             socket.off('new_order');
             socket.off('order_updated');
             socket.off('order_deleted');
+            socket.off('orders_refreshed');
         };
     }, []);
 

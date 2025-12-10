@@ -328,8 +328,9 @@ app.post('/api/tables/clear', async (req, res) => {
         }
 
         // 2. Force complete any active orders for this table
+        // IMPORTANT: Order schema stores tableNo as String. We must query with String.
         await Order.updateMany(
-            { tableNo: id, status: { $nin: ['Completed', 'Cancelled'] } },
+            { tableNo: String(id), status: { $nin: ['Completed', 'Cancelled'] } },
             { $set: { status: 'Completed' } }
         );
 
@@ -344,12 +345,14 @@ app.post('/api/tables/clear', async (req, res) => {
         const socketOccupied = Object.keys(tableConnections).map(Number);
         const occupiedTables = [...new Set([...dbOccupied, ...socketOccupied])];
 
+        console.log(`Table ${id} cleared. Remaining occupied:`, occupiedTables);
         io.emit('table_status_update', occupiedTables);
 
         // Also emit order updates so the admin "Live Orders" list refreshes
+        // Force re-fetch on frontend by emitting a 'refresh_orders' event or just updating the order list
         const updatedOrders = await Order.find().sort({ createdAt: -1 });
-        io.emit('new_order', updatedOrders[0]); // Hacky trigger, better to fetch all, but simplest is just ensuring status update
-        // actually, let's just let the clients re-fetch or rely on the status update
+        // Emit specific event to tell admin to refresh orders
+        io.emit('orders_refreshed', updatedOrders);
 
         res.json({
             success: true,
@@ -357,6 +360,7 @@ app.post('/api/tables/clear', async (req, res) => {
             occupiedTables
         });
     } catch (err) {
+        console.error("Clear Table Error:", err);
         res.status(500).json({ error: err.message });
     }
 });
