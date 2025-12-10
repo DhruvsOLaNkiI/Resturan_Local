@@ -323,8 +323,8 @@ function AdminDashboard() {
                                         type="number"
                                         className="input"
                                         min="0"
-                                        value={config.discountAmount}
-                                        onChange={e => setConfig({ ...config, discountAmount: parseFloat(e.target.value) })}
+                                        value={config.discountAmount || ''}
+                                        onChange={e => setConfig({ ...config, discountAmount: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
                                     />
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1.8rem' }}>
