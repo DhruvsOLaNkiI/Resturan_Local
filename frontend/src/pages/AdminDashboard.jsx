@@ -9,10 +9,9 @@ const socket = io(API_URL, { transports: ['websocket'] });
 function AdminDashboard() {
     const [orders, setOrders] = useState([]);
     const [activeTab, setActiveTab] = useState('orders'); // orders, analytics, pending, qr, menu
-    const [qrTable, setQrTable] = useState(1);
 
     // Config State
-    const [config, setConfig] = useState({ bannerText: '', discountAmount: 0, isBannerActive: false });
+    const [config, setConfig] = useState({ bannerText: '', discountAmount: 0, isBannerActive: false, totalTables: 10 });
     const [products, setProducts] = useState([]);
     const [newProduct, setNewProduct] = useState({ name: '', price: '', category: 'Main Course', image: '', description: '' });
     const [productStartIdx, setProductStartIdx] = useState(0); // Pagination for products if needed, simplified for now
@@ -207,35 +206,56 @@ function AdminDashboard() {
             {activeTab === 'analytics' ? (
                 <Analytics />
             ) : activeTab === 'qr' ? (
-                <div className="container animate-fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem' }}>
-                    <div className="card" style={{ padding: '2rem', width: '100%', maxWidth: '500px' }}>
-                        <h2 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Generate Table QR Code</h2>
-
-                        <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
-                            <input
-                                type="text"
-                                className="input"
-                                placeholder="Enter Table Number (e.g., 5)"
-                                value={qrTable}
-                                onChange={(e) => setQrTable(e.target.value)}
-                            />
-                        </div>
-
-                        {qrTable && (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2rem', background: 'white', borderRadius: '16px' }}>
-                                <QRCode
-                                    value={`${window.location.origin}/menu/${qrTable}`}
-                                    size={256}
-                                    style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                                    viewBox={`0 0 256 256`}
+                <div className="animate-fade-in" style={{ maxWidth: '800px', margin: '0 auto' }}>
+                    <div className="card" style={{ padding: '2rem', textAlign: 'center', marginBottom: '2rem' }}>
+                        <h2 className="text-2xl font-bold mb-4">Table Management</h2>
+                        <form onSubmit={handleConfigSave} style={{ display: 'flex', gap: '1rem', justifyContent: 'center', alignItems: 'flex-end' }}>
+                            <div style={{ textAlign: 'left' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Total Tables</label>
+                                <input
+                                    type="number"
+                                    className="input"
+                                    min="1"
+                                    max="100"
+                                    value={config.totalTables || 10}
+                                    onChange={e => setConfig({ ...config, totalTables: parseInt(e.target.value) })}
+                                    style={{ width: '150px' }}
                                 />
-                                <p style={{ color: 'black', marginTop: '1rem', fontWeight: 'bold' }}>Table {qrTable}</p>
                             </div>
-                        )}
+                            <button type="submit" className="btn btn-primary" style={{ height: '46px' }}>Save & Update</button>
+                        </form>
+                    </div>
 
-                        <div style={{ marginTop: '2rem', color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center' }}>
-                            Print this code and place it on Table {qrTable || '#'}.<br />
-                            Customers can scan it to order directly.
+                    <div className="card" style={{ padding: '2rem' }}>
+                        <h2 className="text-2xl font-bold mb-6 text-center">QR Codes for {config.totalTables} Tables</h2>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2rem' }}>
+                            {Array.from({ length: config.totalTables || 10 }, (_, i) => i + 1).map(num => (
+                                <div key={num} style={{ background: 'white', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
+                                    <QRCode
+                                        id={`qr-code-table-${num}`}
+                                        value={`${window.location.protocol}//${window.location.host}/menu/${num}`}
+                                        size={150}
+                                        level={"H"}
+                                    />
+                                    <p style={{ color: 'black', fontWeight: 'bold', marginTop: '1rem', fontSize: '1.2rem' }}>Table {num}</p>
+                                    <button
+                                        className="btn btn-primary"
+                                        style={{ marginTop: '0.5rem', width: '100%', fontSize: '0.8rem' }}
+                                        onClick={() => {
+                                            const canvas = document.getElementById(`qr-code-table-${num}`);
+                                            const pngUrl = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
+                                            const downloadLink = document.createElement("a");
+                                            downloadLink.href = pngUrl;
+                                            downloadLink.download = `Table-${num}-QR.png`;
+                                            document.body.appendChild(downloadLink);
+                                            downloadLink.click();
+                                            document.body.removeChild(downloadLink);
+                                        }}
+                                    >
+                                        Download PNG
+                                    </button>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
