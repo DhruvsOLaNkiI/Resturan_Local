@@ -203,7 +203,7 @@ function CustomerMenu() {
                 }}>
                     <div>
                         <div style={{ fontWeight: 'bold' }}>{totalItems} items</div>
-                        <div style={{ color: 'var(--primary)' }}>${totalAmount.toFixed(2)}</div>
+                        <div style={{ color: 'var(--primary)' }}>${getTotal().toFixed(2)}</div>
                     </div>
                     <button
                         onClick={placeOrder}
