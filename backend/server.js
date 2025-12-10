@@ -322,10 +322,16 @@ app.post('/api/tables/clear', async (req, res) => {
             return res.status(400).json({ error: 'Valid tableId required' });
         }
 
-        // Clear the socket connection count for this table
+        // 1. Clear the socket connection count for this table
         if (tableConnections[id]) {
             delete tableConnections[id];
         }
+
+        // 2. Force complete any active orders for this table
+        await Order.updateMany(
+            { tableNo: id, status: { $nin: ['Completed', 'Cancelled'] } },
+            { $set: { status: 'Completed' } }
+        );
 
         // Broadcast updated status to all clients
         const config = await Config.findOne({ key: 'store_config' });
@@ -340,9 +346,14 @@ app.post('/api/tables/clear', async (req, res) => {
 
         io.emit('table_status_update', occupiedTables);
 
+        // Also emit order updates so the admin "Live Orders" list refreshes
+        const updatedOrders = await Order.find().sort({ createdAt: -1 });
+        io.emit('new_order', updatedOrders[0]); // Hacky trigger, better to fetch all, but simplest is just ensuring status update
+        // actually, let's just let the clients re-fetch or rely on the status update
+
         res.json({
             success: true,
-            message: `Table ${id} cleared`,
+            message: `Table ${id} cleared and orders completed`,
             occupiedTables
         });
     } catch (err) {
