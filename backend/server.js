@@ -24,10 +24,38 @@ const io = new Server(server, {
     }
 });
 
+// Track active connections per table
+const tableConnections = {}; // { tableId: count }
+
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
+
+    socket.on('join_table', (tableId) => {
+        const id = parseInt(tableId);
+        if (!tableConnections[id]) tableConnections[id] = 0;
+        tableConnections[id]++;
+        socket.tableId = id; // Store tableId on socket for disconnect handling
+        console.log(`Table ${id} joined. Viewers: ${tableConnections[id]}`);
+    });
+
+    socket.on('leave_table', (tableId) => {
+        const id = parseInt(tableId);
+        if (tableConnections[id] > 0) {
+            tableConnections[id]--;
+            if (tableConnections[id] === 0) delete tableConnections[id];
+        }
+    });
+
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
+        if (socket.tableId) {
+            const id = socket.tableId;
+            if (tableConnections[id] > 0) {
+                tableConnections[id]--;
+                if (tableConnections[id] === 0) delete tableConnections[id];
+                console.log(`Table ${id} user disconnected. Viewers: ${tableConnections[id] || 0}`);
+            }
+        }
     });
 });
 
@@ -146,7 +174,12 @@ app.put('/api/orders/:id/status', async (req, res) => {
         // 3. Extract unique table numbers (ensure they are Numbers)
         // Note: 'activeOrders' and 'totalTables' are not defined in this scope.
         // This code block seems to be misplaced or intended for a different endpoint.
-        const occupiedTables = [...new Set(activeOrders.map(order => parseInt(order.tableNo)))];
+        // 3. Extract unique table numbers (ensure they are Numbers)
+        // Combine DB active orders AND Socket active connections
+        const dbOccupied = activeOrders.map(order => parseInt(order.tableNo));
+        const socketOccupied = Object.keys(tableConnections).map(Number);
+
+        const occupiedTables = [...new Set([...dbOccupied, ...socketOccupied])];
 
         res.json({
             totalTables,

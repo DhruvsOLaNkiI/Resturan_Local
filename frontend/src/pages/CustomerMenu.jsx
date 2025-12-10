@@ -22,6 +22,19 @@ function CustomerMenu() {
     const [discountApplied, setDiscountApplied] = useState(0);
     const [activeCategory, setActiveCategory] = useState('All');
 
+    useEffect(() => {
+        // Emit join event for real-time presence
+        if (tableId) {
+            socket.emit('join_table', tableId);
+        }
+
+        return () => {
+            if (tableId) {
+                socket.emit('leave_table', tableId);
+            }
+        };
+    }, [tableId]);
+
     // Attempt to fetch from backend, fall back to mock
     useEffect(() => {
         const fetchProducts = async () => {
