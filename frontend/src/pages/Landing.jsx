@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
 import axios from 'axios';
+import { io } from 'socket.io-client';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const socket = io(API_URL);
 
 function Landing() {
     const [table, setTable] = useState('');
@@ -26,9 +28,21 @@ function Landing() {
             }
         };
         fetchStatus();
-        // Poll every 10 seconds for live updates
-        const interval = setInterval(fetchStatus, 10000);
-        return () => clearInterval(interval);
+
+        // Listen for real-time updates from server
+        socket.on('table_status_update', (occupiedList) => {
+            setTableStatus(prev => ({
+                ...prev,
+                occupiedTables: occupiedList
+            }));
+        });
+
+        // Poll every 30 seconds just as a backup
+        const interval = setInterval(fetchStatus, 30000);
+        return () => {
+            clearInterval(interval);
+            socket.off('table_status_update');
+        };
     }, []);
 
     const handleStart = (e) => {

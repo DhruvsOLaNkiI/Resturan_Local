@@ -30,23 +30,26 @@ const tableConnections = {}; // { tableId: count }
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
 
-    socket.on('join_table', (tableId) => {
+    socket.on('join_table', async (tableId) => {
         const id = parseInt(tableId);
         if (!tableConnections[id]) tableConnections[id] = 0;
         tableConnections[id]++;
         socket.tableId = id; // Store tableId on socket for disconnect handling
         console.log(`Table ${id} joined. Viewers: ${tableConnections[id]}`);
+
+        await broadcastTableStatus();
     });
 
-    socket.on('leave_table', (tableId) => {
+    socket.on('leave_table', async (tableId) => {
         const id = parseInt(tableId);
         if (tableConnections[id] > 0) {
             tableConnections[id]--;
             if (tableConnections[id] === 0) delete tableConnections[id];
         }
+        await broadcastTableStatus();
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', async () => {
         console.log('User disconnected:', socket.id);
         if (socket.tableId) {
             const id = socket.tableId;
@@ -54,9 +57,29 @@ io.on('connection', (socket) => {
                 tableConnections[id]--;
                 if (tableConnections[id] === 0) delete tableConnections[id];
                 console.log(`Table ${id} user disconnected. Viewers: ${tableConnections[id] || 0}`);
+                await broadcastTableStatus();
             }
         }
     });
+
+    // Helper to broadcast status
+    const broadcastTableStatus = async () => {
+        try {
+            // Get DB active orders
+            const activeOrders = await Order.find({ status: { $nin: ['Completed', 'Cancelled'] } }).select('tableNo');
+            const dbOccupied = activeOrders.map(order => parseInt(order.tableNo));
+
+            // Get Socket active connections
+            const socketOccupied = Object.keys(tableConnections).map(Number);
+
+            const occupiedTables = [...new Set([...dbOccupied, ...socketOccupied])];
+
+            // Emit to all clients (Landing page needs this)
+            io.emit('table_status_update', occupiedTables);
+        } catch (err) {
+            console.error("Broadcast Error:", err);
+        }
+    };
 });
 
 // MongoDB Connection
