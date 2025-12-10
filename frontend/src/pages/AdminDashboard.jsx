@@ -120,6 +120,16 @@ function AdminDashboard() {
         }
     };
 
+    const clearTable = async (tableId) => {
+        if (!window.confirm(`Clear Table ${tableId} status?`)) return;
+        try {
+            await axios.post(`${API_URL}/api/tables/clear`, { tableId });
+            // Status will update via socket broadcast
+        } catch (err) {
+            alert('Failed to clear table: ' + err.message);
+        }
+    };
+
     return (
         <div className="container" style={{ padding: '2rem' }}>
             <div className="flex justify-between items-center mb-8">
@@ -287,6 +297,24 @@ function AdminDashboard() {
                                         >
                                             Download PNG
                                         </button>
+                                        {isOccupied && (
+                                            <button
+                                                onClick={() => clearTable(num)}
+                                                style={{
+                                                    marginTop: '0.5rem',
+                                                    width: '100%',
+                                                    fontSize: '0.8rem',
+                                                    padding: '4px 8px',
+                                                    background: 'var(--primary)',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '4px',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                Clear Table
+                                            </button>
+                                        )}
                                     </div>
                                 );
                             })}
