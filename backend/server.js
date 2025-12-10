@@ -312,6 +312,44 @@ app.get('/api/tables/status', async (req, res) => {
     }
 });
 
+// POST /api/tables/clear - Manually clear table status (admin only)
+app.post('/api/tables/clear', async (req, res) => {
+    try {
+        const { tableId } = req.body;
+        const id = parseInt(tableId);
+
+        if (!id || isNaN(id)) {
+            return res.status(400).json({ error: 'Valid tableId required' });
+        }
+
+        // Clear the socket connection count for this table
+        if (tableConnections[id]) {
+            delete tableConnections[id];
+        }
+
+        // Broadcast updated status to all clients
+        const config = await Config.findOne({ key: 'store_config' });
+        const totalTables = config ? config.totalTables : 10;
+
+        const activeOrders = await Order.find({
+            status: { $nin: ['Completed', 'Cancelled'] }
+        }).select('tableNo');
+        const dbOccupied = activeOrders.map(order => parseInt(order.tableNo));
+        const socketOccupied = Object.keys(tableConnections).map(Number);
+        const occupiedTables = [...new Set([...dbOccupied, ...socketOccupied])];
+
+        io.emit('table_status_update', occupiedTables);
+
+        res.json({
+            success: true,
+            message: `Table ${id} cleared`,
+            occupiedTables
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
