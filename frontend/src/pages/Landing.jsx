@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 function Landing() {
     const [table, setTable] = useState('');
@@ -8,6 +11,25 @@ function Landing() {
 
     const [showScanner, setShowScanner] = useState(false);
     const [scanError, setScanError] = useState('');
+    const [tableStatus, setTableStatus] = useState({ totalTables: 10, occupiedTables: [] });
+    const [loadingStatus, setLoadingStatus] = useState(true);
+
+    useEffect(() => {
+        const fetchStatus = async () => {
+            try {
+                const res = await axios.get(`${API_URL}/api/tables/status`);
+                setTableStatus(res.data);
+            } catch (err) {
+                console.error("Failed to fetch table status", err);
+            } finally {
+                setLoadingStatus(false);
+            }
+        };
+        fetchStatus();
+        // Poll every 10 seconds for live updates
+        const interval = setInterval(fetchStatus, 10000);
+        return () => clearInterval(interval);
+    }, []);
 
     const handleStart = (e) => {
         e.preventDefault();
@@ -107,6 +129,55 @@ function Landing() {
                         </button>
                     </div>
                 )}
+
+                {/* Live Seating Status */}
+                <div style={{ marginTop: '3rem', width: '100%' }}>
+                    <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'white' }}>Live Seating Availability</h3>
+
+                    {loadingStatus ? (
+                        <p style={{ color: 'var(--text-muted)' }}>Loading status...</p>
+                    ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.8rem', justifyItems: 'center' }}>
+                            {Array.from({ length: tableStatus.totalTables }, (_, i) => i + 1).map(num => {
+                                const isOccupied = tableStatus.occupiedTables.includes(num);
+                                return (
+                                    <div
+                                        key={num}
+                                        onClick={() => !isOccupied && setTable(num)}
+                                        style={{
+                                            width: '40px',
+                                            height: '40px',
+                                            borderRadius: '50%',
+                                            background: isOccupied ? 'rgba(255, 107, 107, 0.2)' : 'rgba(75, 203, 164, 0.2)',
+                                            border: isOccupied ? '2px solid #ff6b6b' : '2px solid var(--success)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: isOccupied ? '#ff6b6b' : 'var(--success)',
+                                            fontWeight: 'bold',
+                                            cursor: isOccupied ? 'default' : 'pointer',
+                                            fontSize: '0.9rem',
+                                            transition: 'transform 0.2s',
+                                        }}
+                                        title={isOccupied ? "Occupied" : "Free - Click to Select"}
+                                        onMouseEnter={e => !isOccupied && (e.currentTarget.style.transform = 'scale(1.1)')}
+                                        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                                    >
+                                        {num}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '1rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--success)' }}></div> Free
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ff6b6b' }}></div> Occupied
+                        </div>
+                    </div>
+                </div>
                 <div style={{ marginTop: '2rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                     <a href="/admin" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Manager Login</a>
                 </div>
