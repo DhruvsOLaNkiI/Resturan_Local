@@ -6,7 +6,6 @@ const http = require('http');
 const { Server } = require('socket.io');
 
 const Product = require('./models/Product');
-const Product = require('./models/Product');
 const Order = require('./models/Order');
 const Config = require('./models/Config');
 
