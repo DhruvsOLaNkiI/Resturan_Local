@@ -147,6 +147,7 @@ app.get('/api/analytics', async (req, res) => {
         ]);
 
         // 3. Overall Stats
+        const totalOrders = await Order.countDocuments();
         const totalRevenueResult = await Order.aggregate([
             { $group: { _id: null, total: { $sum: "$totalAmount" } } }
         ]);
