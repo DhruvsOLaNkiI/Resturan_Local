@@ -17,19 +17,36 @@ function CustomerMenu() {
     const navigate = useNavigate();
     const [products, setProducts] = useState(MOCK_PRODUCTS);
     const [cart, setCart] = useState({});
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [config, setConfig] = useState(null); // Banner config
+    const [discountApplied, setDiscountApplied] = useState(0);
     const [activeCategory, setActiveCategory] = useState('All');
 
     // Attempt to fetch from backend, fall back to mock
     useEffect(() => {
         const fetchProducts = async () => {
             try {
+                // Fetch products
                 const res = await axios.get(`${API_URL}/api/products`);
                 if (res.data && res.data.length > 0) {
-                    setProducts(res.data);
+                    // Sort trending first
+                    const sorted = res.data.sort((a, b) => (b.isTrending === true) - (a.isTrending === true));
+                    setProducts(sorted);
                 }
+
+                // Fetch promo config
+                try {
+                    const confRes = await axios.get(`${API_URL}/api/config`);
+                    if (confRes.data && confRes.data.isBannerActive) {
+                        setConfig(confRes.data);
+                        setDiscountApplied(confRes.data.discountAmount);
+                    }
+                } catch (e) { console.error("Config fetch failed", e); }
+
             } catch (err) {
                 console.log('Using mock data as backend might be empty or down');
+            } finally {
+                setLoading(false);
             }
         };
         fetchProducts();
@@ -57,7 +74,14 @@ function CustomerMenu() {
         });
     };
 
-    const totalAmount = Object.values(cart).reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const getTotal = () => {
+        const subtotal = Object.values(cart).reduce((total, item) => total + (item.price * item.quantity), 0);
+        return Math.max(0, subtotal - (config?.isBannerActive ? config.discountAmount : 0));
+    };
+
+    const getSubtotal = () => {
+        return Object.values(cart).reduce((total, item) => total + (item.price * item.quantity), 0);
+    };
     const totalItems = Object.values(cart).reduce((sum, item) => sum + item.quantity, 0);
 
     const placeOrder = async () => {
@@ -74,7 +98,7 @@ function CustomerMenu() {
             await axios.post(`${API_URL}/api/orders`, {
                 tableNo: tableId,
                 items,
-                totalAmount
+                totalAmount: getTotal()
             });
 
             alert('Order Placed Successfully! Kitchen is preparing your food.');
@@ -93,6 +117,23 @@ function CustomerMenu() {
 
     return (
         <div className="container" style={{ paddingBottom: '100px' }}>
+            {/* Promo Banner */}
+            {config && config.isBannerActive && (
+                <div style={{
+                    background: 'linear-gradient(45deg, #ff6b6b, #fca5a5)',
+                    color: 'white',
+                    padding: '1rem',
+                    textAlign: 'center',
+                    borderRadius: '0 0 16px 16px',
+                    boxShadow: '0 4px 15px rgba(255, 107, 107, 0.4)',
+                    marginBottom: '1rem',
+                    animation: 'slideDown 0.5s ease-out'
+                }}>
+                    <h3 style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>🎉 {config.bannerText}</h3>
+                    <p style={{ fontSize: '0.9rem', opacity: 0.9 }}>Discount of ${config.discountAmount} applied at checkout!</p>
+                </div>
+            )}
+
             <header className="flex-between" style={{ marginBottom: '2rem', padding: '1rem 0' }}>
                 <div>
                     <h2 style={{ margin: 0 }}>Table {tableId}</h2>

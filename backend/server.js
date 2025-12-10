@@ -6,7 +6,9 @@ const http = require('http');
 const { Server } = require('socket.io');
 
 const Product = require('./models/Product');
+const Product = require('./models/Product');
 const Order = require('./models/Order');
+const Config = require('./models/Config');
 
 const app = express();
 const server = http.createServer(app);
@@ -56,6 +58,44 @@ app.post('/api/products', async (req, res) => {
         const product = new Product(req.body);
         await product.save();
         res.status(201).json(product);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+// PUT /api/products/:id - Update product (e.g. Trending)
+app.put('/api/products/:id', async (req, res) => {
+    try {
+        const product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json(product);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+// GET /api/config - Get store config
+app.get('/api/config', async (req, res) => {
+    try {
+        let config = await Config.findOne({ key: 'store_config' });
+        if (!config) {
+            config = new Config();
+            await config.save();
+        }
+        res.json(config);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/config - Update store config
+app.post('/api/config', async (req, res) => {
+    try {
+        const config = await Config.findOneAndUpdate(
+            { key: 'store_config' },
+            req.body,
+            { new: true, upsert: true }
+        );
+        res.json(config);
     } catch (err) {
         res.status(400).json({ error: err.message });
     }

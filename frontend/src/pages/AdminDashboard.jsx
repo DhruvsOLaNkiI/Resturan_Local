@@ -8,8 +8,13 @@ const socket = io(API_URL, { transports: ['websocket'] });
 
 function AdminDashboard() {
     const [orders, setOrders] = useState([]);
-    const [activeTab, setActiveTab] = useState('orders'); // 'orders', 'analytics', 'qr'
-    const [qrTable, setQrTable] = useState('');
+    const [activeTab, setActiveTab] = useState('orders'); // orders, analytics, pending, qr, menu
+    const [qrTable, setQrTable] = useState(1);
+
+    // Config State
+    const [config, setConfig] = useState({ bannerText: '', discountAmount: 0, isBannerActive: false });
+    const [products, setProducts] = useState([]);
+    const [productStartIdx, setProductStartIdx] = useState(0); // Pagination for products if needed, simplified for now
 
     useEffect(() => {
         // Initial load
@@ -17,6 +22,14 @@ function AdminDashboard() {
             try {
                 const res = await axios.get(`${API_URL}/api/orders`);
                 setOrders(res.data);
+
+                // Fetch config
+                const configRes = await axios.get(`${API_URL}/api/config`);
+                setConfig(configRes.data);
+
+                // Fetch products
+                const prodRes = await axios.get(`${API_URL}/api/products`);
+                setProducts(prodRes.data);
             } catch (err) {
                 console.error("Failed to fetch orders (server might be down)");
             }
@@ -71,8 +84,60 @@ function AdminDashboard() {
         return idx < flow.length - 1 ? flow[idx + 1] : null;
     };
 
+    const handleConfigSave = async (e) => {
+        e.preventDefault();
+        try {
+            const res = await axios.post(`${API_URL}/api/config`, config);
+            setConfig(res.data);
+            alert("Settings Saved!");
+        } catch (err) {
+            console.error(err);
+            alert("Failed to save settings");
+        }
+    };
+
+    const toggleTrending = async (product) => {
+        try {
+            const updated = { ...product, isTrending: !product.isTrending };
+            await axios.put(`${API_URL}/api/products/${product._id}`, updated);
+            setProducts(prev => prev.map(p => p._id === product._id ? updated : p));
+        } catch (err) {
+            console.error(err);
+            alert("Failed to update product");
+        }
+    };
+
     return (
-        <div className="container">
+        <div className="container" style={{ padding: '2rem' }}>
+            <div className="flex justify-between items-center mb-8">
+                <h1 className="text-4xl font-bold gradient-text">Manager Dashboard</h1>
+                <div className="flex gap-4">
+                    <button
+                        onClick={() => setActiveTab('orders')}
+                        className={`btn ${activeTab === 'orders' ? 'btn-primary' : ''}`}
+                    >
+                        Live Orders
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('analytics')}
+                        className={`btn ${activeTab === 'analytics' ? 'btn-primary' : ''}`}
+                    >
+                        Analytics
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('menu')}
+                        className={`btn ${activeTab === 'menu' ? 'btn-primary' : ''}`}
+                    >
+                        Menu & Promo
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('qr')}
+                        className={`btn ${activeTab === 'qr' ? 'btn-primary' : ''}`}
+                    >
+                        Tables & QR
+                    </button>
+                </div>
+            </div>
             <header className="flex-between" style={{ marginBottom: '2rem', padding: '1rem 0', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
                     <h1>Manager Dashboard</h1>
@@ -230,6 +295,90 @@ function AdminDashboard() {
                             No orders yet. Waiting for hungry customers!
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* Menu & Promo Tab */}
+            {activeTab === 'menu' && (
+                <div className="animate-fade-in" style={{ maxWidth: '800px', margin: '0 auto' }}>
+
+                    {/* Coupon Configuration */}
+                    <div className="card" style={{ padding: '2rem', marginBottom: '2rem' }}>
+                        <h2 className="text-2xl font-bold mb-4">📢 Promotion Banner</h2>
+                        <form onSubmit={handleConfigSave} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Banner Message</label>
+                                <input
+                                    type="text"
+                                    className="input"
+                                    placeholder="e.g. Grand Opening Sale! $5 Off"
+                                    value={config.bannerText}
+                                    onChange={e => setConfig({ ...config, bannerText: e.target.value })}
+                                />
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Discount Amount ($)</label>
+                                    <input
+                                        type="number"
+                                        className="input"
+                                        min="0"
+                                        value={config.discountAmount}
+                                        onChange={e => setConfig({ ...config, discountAmount: parseFloat(e.target.value) })}
+                                    />
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1.8rem' }}>
+                                    <input
+                                        type="checkbox"
+                                        id="activePromo"
+                                        checked={config.isBannerActive}
+                                        onChange={e => setConfig({ ...config, isBannerActive: e.target.checked })}
+                                        style={{ width: '20px', height: '20px' }}
+                                    />
+                                    <label htmlFor="activePromo">Activate Banner</label>
+                                </div>
+                            </div>
+                            <button type="submit" className="btn btn-primary" style={{ alignSelf: 'flex-start' }}>Save Settings</button>
+                        </form>
+                    </div>
+
+                    {/* Menu Management */}
+                    <div className="card" style={{ padding: '2rem' }}>
+                        <h2 className="text-2xl font-bold mb-4">🔥 Menu Management</h2>
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                                        <th style={{ padding: '1rem', textAlign: 'left' }}>Item</th>
+                                        <th style={{ padding: '1rem', textAlign: 'center' }}>Price</th>
+                                        <th style={{ padding: '1rem', textAlign: 'center' }}>Trending?</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {products.map(product => (
+                                        <tr key={product._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                            <td style={{ padding: '1rem' }}>{product.name}</td>
+                                            <td style={{ padding: '1rem', textAlign: 'center' }}>${product.price}</td>
+                                            <td style={{ padding: '1rem', textAlign: 'center' }}>
+                                                <button
+                                                    onClick={() => toggleTrending(product)}
+                                                    className={`btn`}
+                                                    style={{
+                                                        background: product.isTrending ? 'var(--primary)' : 'rgba(255,255,255,0.1)',
+                                                        padding: '4px 12px',
+                                                        fontSize: '0.9rem'
+                                                    }}
+                                                >
+                                                    {product.isTrending ? "🔥 Hot" : "Normal"}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                 </div>
             )}
         </div>
