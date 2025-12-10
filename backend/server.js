@@ -117,6 +117,21 @@ app.put('/api/orders/:id/status', async (req, res) => {
     }
 });
 
+// DELETE /api/orders/:id - Delete an order
+app.delete('/api/orders/:id', async (req, res) => {
+    try {
+        const order = await Order.findByIdAndDelete(req.params.id);
+        if (!order) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+        // Emit event so dashboard updates automatically
+        io.emit('order_deleted', req.params.id);
+        res.json({ message: 'Order deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // GET /api/analytics - Get dashboard stats
 app.get('/api/analytics', async (req, res) => {
     try {
