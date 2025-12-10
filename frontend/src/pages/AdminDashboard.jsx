@@ -207,8 +207,29 @@ function AdminDashboard() {
                 <Analytics />
             ) : activeTab === 'qr' ? (
                 <div className="animate-fade-in" style={{ maxWidth: '800px', margin: '0 auto' }}>
+
+                    {/* Status Summary */}
+                    <div className="card" style={{ padding: '2rem', textAlign: 'center', marginBottom: '2rem', display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
+                        <div>
+                            <h2 className="text-2xl font-bold mb-2">Table Status</h2>
+                            <p style={{ color: 'var(--text-muted)' }}>Real-time occupancy tracking</p>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#ff6b6b' }}>
+                                {Array.from(new Set(orders.filter(o => o.status !== 'Completed' && o.status !== 'Cancelled').map(o => o.tableNo))).length}
+                            </div>
+                            <div style={{ color: '#ff6b6b' }}>Occupied</div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--success)' }}>
+                                {(config.totalTables || 10) - Array.from(new Set(orders.filter(o => o.status !== 'Completed' && o.status !== 'Cancelled').map(o => o.tableNo))).length}
+                            </div>
+                            <div style={{ color: 'var(--success)' }}>Free</div>
+                        </div>
+                    </div>
+
                     <div className="card" style={{ padding: '2rem', textAlign: 'center', marginBottom: '2rem' }}>
-                        <h2 className="text-2xl font-bold mb-4">Table Management</h2>
+                        <h2 className="text-2xl font-bold mb-4">Settings</h2>
                         <form onSubmit={handleConfigSave} style={{ display: 'flex', gap: '1rem', justifyContent: 'center', alignItems: 'flex-end' }}>
                             <div style={{ textAlign: 'left' }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Total Tables</label>
@@ -229,33 +250,46 @@ function AdminDashboard() {
                     <div className="card" style={{ padding: '2rem' }}>
                         <h2 className="text-2xl font-bold mb-6 text-center">QR Codes for {config.totalTables} Tables</h2>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2rem' }}>
-                            {Array.from({ length: config.totalTables || 10 }, (_, i) => i + 1).map(num => (
-                                <div key={num} style={{ background: 'white', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
-                                    <QRCode
-                                        id={`qr-code-table-${num}`}
-                                        value={`${window.location.protocol}//${window.location.host}/menu/${num}`}
-                                        size={150}
-                                        level={"H"}
-                                    />
-                                    <p style={{ color: 'black', fontWeight: 'bold', marginTop: '1rem', fontSize: '1.2rem' }}>Table {num}</p>
-                                    <button
-                                        className="btn btn-primary"
-                                        style={{ marginTop: '0.5rem', width: '100%', fontSize: '0.8rem' }}
-                                        onClick={() => {
-                                            const canvas = document.getElementById(`qr-code-table-${num}`);
-                                            const pngUrl = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
-                                            const downloadLink = document.createElement("a");
-                                            downloadLink.href = pngUrl;
-                                            downloadLink.download = `Table-${num}-QR.png`;
-                                            document.body.appendChild(downloadLink);
-                                            downloadLink.click();
-                                            document.body.removeChild(downloadLink);
-                                        }}
-                                    >
-                                        Download PNG
-                                    </button>
-                                </div>
-                            ))}
+                            {Array.from({ length: config.totalTables || 10 }, (_, i) => i + 1).map(num => {
+                                const isOccupied = orders.some(o => o.tableNo == num && o.status !== 'Completed' && o.status !== 'Cancelled');
+                                return (
+                                    <div key={num} style={{
+                                        background: isOccupied ? 'rgba(255, 107, 107, 0.1)' : 'rgba(75, 203, 164, 0.1)',
+                                        padding: '1rem',
+                                        borderRadius: '12px',
+                                        textAlign: 'center',
+                                        border: isOccupied ? '2px solid #ff6b6b' : '2px solid transparent'
+                                    }}>
+                                        <div style={{ background: 'white', padding: '10px', borderRadius: '8px', display: 'inline-block' }}>
+                                            <QRCode
+                                                id={`qr-code-table-${num}`}
+                                                value={`${window.location.protocol}//${window.location.host}/menu/${num}`}
+                                                size={130}
+                                                level={"H"}
+                                            />
+                                        </div>
+                                        <p style={{ color: isOccupied ? '#ff6b6b' : 'var(--success)', fontWeight: 'bold', marginTop: '1rem', fontSize: '1.2rem' }}>
+                                            Table {num} {isOccupied ? '(Busy)' : '(Free)'}
+                                        </p>
+                                        <button
+                                            className="btn btn-primary"
+                                            style={{ marginTop: '0.5rem', width: '100%', fontSize: '0.8rem' }}
+                                            onClick={() => {
+                                                const canvas = document.getElementById(`qr-code-table-${num}`);
+                                                const pngUrl = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
+                                                const downloadLink = document.createElement("a");
+                                                downloadLink.href = pngUrl;
+                                                downloadLink.download = `Table-${num}-QR.png`;
+                                                document.body.appendChild(downloadLink);
+                                                downloadLink.click();
+                                                document.body.removeChild(downloadLink);
+                                            }}
+                                        >
+                                            Download PNG
+                                        </button>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
