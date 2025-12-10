@@ -14,6 +14,7 @@ function AdminDashboard() {
     // Config State
     const [config, setConfig] = useState({ bannerText: '', discountAmount: 0, isBannerActive: false });
     const [products, setProducts] = useState([]);
+    const [newProduct, setNewProduct] = useState({ name: '', price: '', category: 'Main Course', image: '', description: '' });
     const [productStartIdx, setProductStartIdx] = useState(0); // Pagination for products if needed, simplified for now
 
     useEffect(() => {
@@ -104,6 +105,19 @@ function AdminDashboard() {
         } catch (err) {
             console.error(err);
             alert("Failed to update product");
+        }
+    };
+
+    const handleAddProduct = async (e) => {
+        e.preventDefault();
+        try {
+            const res = await axios.post(`${API_URL}/api/products`, newProduct);
+            setProducts([...products, res.data]);
+            setNewProduct({ name: '', price: '', category: 'Main Course', image: '', description: '' });
+            alert("Dish Added Successfully!");
+        } catch (err) {
+            console.error(err);
+            alert("Failed to add dish");
         }
     };
 
@@ -339,6 +353,58 @@ function AdminDashboard() {
                                 </div>
                             </div>
                             <button type="submit" className="btn btn-primary" style={{ alignSelf: 'flex-start' }}>Save Settings</button>
+                        </form>
+                    </div>
+
+                    {/* Add New Dish */}
+                    <div className="card" style={{ padding: '2rem', marginBottom: '2rem' }}>
+                        <h2 className="text-2xl font-bold mb-4">🍽️ Add New Dish</h2>
+                        <form onSubmit={handleAddProduct} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <input
+                                type="text"
+                                className="input"
+                                placeholder="Dish Name"
+                                required
+                                value={newProduct.name}
+                                onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
+                            />
+                            <div className="flex gap-2">
+                                <span style={{ padding: '10px', background: 'rgba(255,255,255,0.1)', borderRadius: '8px', display: 'flex', alignItems: 'center' }}>$</span>
+                                <input
+                                    type="number"
+                                    className="input"
+                                    placeholder="Price"
+                                    required
+                                    min="0"
+                                    value={newProduct.price}
+                                    onChange={e => setNewProduct({ ...newProduct, price: e.target.value })}
+                                />
+                            </div>
+                            <select
+                                className="input"
+                                value={newProduct.category}
+                                onChange={e => setNewProduct({ ...newProduct, category: e.target.value })}
+                            >
+                                <option>Starters</option>
+                                <option>Main Course</option>
+                                <option>Desserts</option>
+                                <option>Drinks</option>
+                            </select>
+                            <input
+                                type="text"
+                                className="input"
+                                placeholder="Image URL (e.g. from Unsplash)"
+                                value={newProduct.image}
+                                onChange={e => setNewProduct({ ...newProduct, image: e.target.value })}
+                            />
+                            <textarea
+                                className="input"
+                                placeholder="Description (Optional)"
+                                style={{ gridColumn: '1/-1', minHeight: '80px' }}
+                                value={newProduct.description}
+                                onChange={e => setNewProduct({ ...newProduct, description: e.target.value })}
+                            />
+                            <button type="submit" className="btn btn-primary" style={{ gridColumn: '1/-1' }}>Add Dish</button>
                         </form>
                     </div>
 
