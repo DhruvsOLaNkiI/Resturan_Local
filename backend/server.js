@@ -298,6 +298,35 @@ app.get('/api/analytics', async (req, res) => {
     }
 });
 
+// GET /api/tables/status - Get public table status
+app.get('/api/tables/status', async (req, res) => {
+    try {
+        // 1. Get Config for Total Tables
+        let config = await Config.findOne({ key: 'store_config' });
+        const totalTables = config ? config.totalTables : 10;
+
+        // 2. Get Active Orders from DB
+        const activeOrders = await Order.find({
+            status: { $nin: ['Completed', 'Cancelled'] }
+        }).select('tableNo');
+        const dbOccupied = activeOrders.map(order => parseInt(order.tableNo));
+
+        // 3. Get Active Socket Connections
+        // Use the global tableConnections object
+        const socketOccupied = Object.keys(tableConnections).map(Number);
+
+        // 4. Merge
+        const occupiedTables = [...new Set([...dbOccupied, ...socketOccupied])];
+
+        res.json({
+            totalTables,
+            occupiedTables
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
