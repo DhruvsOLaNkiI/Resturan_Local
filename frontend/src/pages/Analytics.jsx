@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
+const API_URL = import.meta.env.VITE_API_URL || '';
+
 function Analytics() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -9,7 +11,7 @@ function Analytics() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const res = await axios.get('/api/analytics');
+                const res = await axios.get(`${API_URL}/api/analytics`);
                 setData(res.data);
             } catch (err) {
                 console.error("Failed to fetch analytics", err);

@@ -3,8 +3,8 @@ import io from 'socket.io-client';
 import axios from 'axios';
 import QRCode from "react-qr-code";
 import Analytics from './Analytics';
-
-const socket = io();
+const API_URL = import.meta.env.VITE_API_URL || '';
+const socket = io(API_URL, { transports: ['websocket'] });
 
 function AdminDashboard() {
     const [orders, setOrders] = useState([]);
@@ -15,7 +15,7 @@ function AdminDashboard() {
         // Initial load
         const fetchOrders = async () => {
             try {
-                const res = await axios.get('/api/orders');
+                const res = await axios.get(`${API_URL}/api/orders`);
                 setOrders(res.data);
             } catch (err) {
                 console.error("Failed to fetch orders (server might be down)");
@@ -42,7 +42,7 @@ function AdminDashboard() {
 
     const updateStatus = async (orderId, newStatus) => {
         try {
-            await axios.put(`/api/orders/${orderId}/status`, { status: newStatus });
+            await axios.put(`${API_URL}/api/orders/${orderId}/status`, { status: newStatus });
         } catch (err) {
             console.error("Failed to update status", err);
             alert("Failed to update status");

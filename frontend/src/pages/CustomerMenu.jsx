@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_URL || '';
+
 // Mock data in case backend isn't populated or available yet
 const MOCK_PRODUCTS = [
     { _id: '507f1f77bcf86cd799439011', name: 'Truffle Burger', price: 18, category: 'Main', image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=500&q=60', description: 'Juicy beef patty with truffle aioli' },
@@ -22,7 +24,7 @@ function CustomerMenu() {
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                const res = await axios.get('/api/products');
+                const res = await axios.get(`${API_URL}/api/products`);
                 if (res.data && res.data.length > 0) {
                     setProducts(res.data);
                 }
@@ -69,7 +71,7 @@ function CustomerMenu() {
                 name: item.name
             }));
 
-            await axios.post('/api/orders', {
+            await axios.post(`${API_URL}/api/orders`, {
                 tableNo: tableId,
                 items,
                 totalAmount
