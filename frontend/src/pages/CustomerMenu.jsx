@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { io } from 'socket.io-client';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
+const socket = io(API_URL); // Initialize socket connection
 
 // Mock data in case backend isn't populated or available yet
 const MOCK_PRODUCTS = [
