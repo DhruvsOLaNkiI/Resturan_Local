@@ -143,6 +143,16 @@ app.put('/api/orders/:id/status', async (req, res) => {
             { new: true }
         );
 
+        // 3. Extract unique table numbers (ensure they are Numbers)
+        // Note: 'activeOrders' and 'totalTables' are not defined in this scope.
+        // This code block seems to be misplaced or intended for a different endpoint.
+        const occupiedTables = [...new Set(activeOrders.map(order => parseInt(order.tableNo)))];
+
+        res.json({
+            totalTables,
+            occupiedTables
+        });
+
         if (!order) {
             return res.status(404).json({ error: 'Order not found' });
         }
